@@ -16,18 +16,32 @@
         const MQTT_BROKER = 'wss://mqttgo.vip:8084/mqtt';
         const TOPIC_PREFIX = '/user/fire2002_dev';
 
-        // Topic 定義
-        const getTopics = (deviceId) => ({
-            LOGIN_REQUEST: `${TOPIC_PREFIX}/${deviceId}/login/request`,
-            LOGOUT_REQUEST: `${TOPIC_PREFIX}/${deviceId}/logout/request`,
-            LOGIN_RESPONSE: `${TOPIC_PREFIX}/${deviceId}/login/response`,
-            COMMAND: `${TOPIC_PREFIX}/${deviceId}/command`,
-            STATUS: `${TOPIC_PREFIX}/${deviceId}/status`,
-            FEEDBACK: `${TOPIC_PREFIX}/${deviceId}/feedback`,
-            IMAGE: `${TOPIC_PREFIX}/${deviceId}/image`,
-            SETTINGS: `${TOPIC_PREFIX}/${deviceId}/settings`,
+        // 訂閱主題（接收）
+        const getSubTopics = (deviceId) => ({
+            LOGIN_RESPONSE:  `${TOPIC_PREFIX}/${deviceId}/login/response`,
+            TEMPERATURE:     `${TOPIC_PREFIX}/${deviceId}/senser/temperature`,
+            HUMIDITY:        `${TOPIC_PREFIX}/${deviceId}/senser/humidity`,
+            CORE_TEMP:       `${TOPIC_PREFIX}/${deviceId}/senser/esp_temp`,
+            LIGHT_VOLTAGE:   `${TOPIC_PREFIX}/${deviceId}/senser/light`,
+            LIGHT_STATE:     `${TOPIC_PREFIX}/${deviceId}/device/light/state`,
+            FAN_STATE:       `${TOPIC_PREFIX}/${deviceId}/device/fan/state`,
+            WATERPUMP_STATE: `${TOPIC_PREFIX}/${deviceId}/device/waterpump/state`,
+            SETTINGS_RESPONSE: `${TOPIC_PREFIX}/${deviceId}/settings/response`,
+            CAMERA_STATUS:   `${TOPIC_PREFIX}/${deviceId}/device/camera/status`,
+            CAMERA_INFO:     `${TOPIC_PREFIX}/${deviceId}/device/camera/info`,
+            CAMERA_DATA:     `${TOPIC_PREFIX}/${deviceId}/device/camera/data`,
+        });
+
+        // 推送主題（發送）
+        const getPubTopics = (deviceId) => ({
+            LOGIN_REQUEST:    `${TOPIC_PREFIX}/${deviceId}/login/request`,
+            LOGOUT_REQUEST:   `${TOPIC_PREFIX}/${deviceId}/logout/request`,
+            LIGHT_SWITCH:     `${TOPIC_PREFIX}/${deviceId}/device/light/switch`,
+            FAN_SWITCH:       `${TOPIC_PREFIX}/${deviceId}/device/fan/switch`,
+            WATERPUMP_SWITCH: `${TOPIC_PREFIX}/${deviceId}/device/waterpump/switch`,
+            SETTINGS:         `${TOPIC_PREFIX}/${deviceId}/settings`,
             SETTINGS_REQUEST: `${TOPIC_PREFIX}/${deviceId}/settings/request`,
-            SETTINGS_RESPONSE: `${TOPIC_PREFIX}/${deviceId}/settings/response`
+            CAMERA_SWITCH:    `${TOPIC_PREFIX}/${deviceId}/device/camera/switch`,
         });
 
         // 等待登入的暫存資料
@@ -35,7 +49,7 @@
 
         // 初始化 MQTT 連線（credentials 由 Worker 提供）
         function initMQTT(credentials) {
-            const clientId = "plant_" + Math.random().toString(16).substr(2, 8);
+            const clientId = "Plant_" + Math.random().toString(16).substr(2, 8);
             const brokerUrl = (credentials && credentials.broker) ? credentials.broker : MQTT_BROKER;
             const options = {
                 username: credentials ? credentials.username : '',
@@ -85,22 +99,43 @@
             const message = payload.toString();
             console.log('Received:', topic, message);
 
-            const topics = getTopics(currentDeviceId);
+            const subTopics = getSubTopics(currentDeviceId);
 
-            if (topic === topics.LOGIN_RESPONSE) {
+            if (topic === subTopics.LOGIN_RESPONSE) {
                 handleLoginResponse(message);
             }
-            else if (topic === topics.STATUS) {
-                handleStatusUpdate(message);
+            else if (topic === subTopics.TEMPERATURE) {
+                handleTemperature(message);
             }
-            else if (topic === topics.FEEDBACK) {
-                handleCommandFeedback(message);
+            else if (topic === subTopics.HUMIDITY) {
+                handleHumidity(message);
             }
-            else if (topic === topics.IMAGE) {
-                handleImageData(message);
+            else if (topic === subTopics.CORE_TEMP) {
+                handleCoreTemp(message);
             }
-            else if (topic === topics.SETTINGS_RESPONSE) {
+            else if (topic === subTopics.LIGHT_VOLTAGE) {
+                handleLightVoltage(message);
+            }
+            else if (topic === subTopics.LIGHT_STATE) {
+                handleLightState(message);
+            }
+            else if (topic === subTopics.FAN_STATE) {
+                handleFanState(message);
+            }
+            else if (topic === subTopics.WATERPUMP_STATE) {
+                handleWaterpumpState(message);
+            }
+            else if (topic === subTopics.SETTINGS_RESPONSE) {
                 handleSettingsResponse(message);
+            }
+            else if (topic === subTopics.CAMERA_STATUS) {
+                handleCameraStatus(message);
+            }
+            else if (topic === subTopics.CAMERA_INFO) {
+                handleCameraInfo(message);
+            }
+            else if (topic === subTopics.CAMERA_DATA) {
+                handleCameraData(message);
             }
         }
 
@@ -121,11 +156,18 @@
                     showLoginStatus('登入成功！', 'success');
                     showToast('登入成功', 'success');
 
-                    const topics = getTopics(currentDeviceId);
-                    mqtt_client.subscribe(topics.STATUS);
-                    mqtt_client.subscribe(topics.FEEDBACK);
-                    mqtt_client.subscribe(topics.IMAGE);
-                    mqtt_client.subscribe(topics.SETTINGS_RESPONSE);
+                    const subTopics = getSubTopics(currentDeviceId);
+                    mqtt_client.subscribe(subTopics.TEMPERATURE);
+                    mqtt_client.subscribe(subTopics.HUMIDITY);
+                    mqtt_client.subscribe(subTopics.CORE_TEMP);
+                    mqtt_client.subscribe(subTopics.LIGHT_VOLTAGE);
+                    mqtt_client.subscribe(subTopics.LIGHT_STATE);
+                    mqtt_client.subscribe(subTopics.FAN_STATE);
+                    mqtt_client.subscribe(subTopics.WATERPUMP_STATE);
+                    mqtt_client.subscribe(subTopics.SETTINGS_RESPONSE);
+                    mqtt_client.subscribe(subTopics.CAMERA_STATUS);
+                    mqtt_client.subscribe(subTopics.CAMERA_INFO);
+                    mqtt_client.subscribe(subTopics.CAMERA_DATA);
                 } else {
                     showLoginStatus(response.message || '登入失敗，請檢查帳號密碼', 'error');
                 }
@@ -136,51 +178,107 @@
                     showLoginStatus('登入成功！', 'success');
                     showToast('登入成功', 'success');
 
-                    const topics = getTopics(currentDeviceId);
-                    mqtt_client.subscribe(topics.STATUS);
-                    mqtt_client.subscribe(topics.FEEDBACK);
-                    mqtt_client.subscribe(topics.IMAGE);
-                    mqtt_client.subscribe(topics.SETTINGS_RESPONSE);
+                    const subTopics = getSubTopics(currentDeviceId);
+                    mqtt_client.subscribe(subTopics.TEMPERATURE);
+                    mqtt_client.subscribe(subTopics.HUMIDITY);
+                    mqtt_client.subscribe(subTopics.CORE_TEMP);
+                    mqtt_client.subscribe(subTopics.LIGHT_VOLTAGE);
+                    mqtt_client.subscribe(subTopics.LIGHT_STATE);
+                    mqtt_client.subscribe(subTopics.FAN_STATE);
+                    mqtt_client.subscribe(subTopics.WATERPUMP_STATE);
+                    mqtt_client.subscribe(subTopics.SETTINGS_RESPONSE);
+                    mqtt_client.subscribe(subTopics.CAMERA_STATUS);
+                    mqtt_client.subscribe(subTopics.CAMERA_INFO);
+                    mqtt_client.subscribe(subTopics.CAMERA_DATA);
                 } else {
                     showLoginStatus('登入失敗: ' + message, 'error');
                 }
             }
         }
 
-        // 處理狀態更新
-        function handleStatusUpdate(message) {
+        // 感測器資料處理
+        function handleTemperature(message) {
             try {
-                const status = JSON.parse(message);
-
-                // 更新感測器數據
-                if (status.core_temp !== undefined) {
-                    document.getElementById('coreTemp').textContent = status.core_temp + '°C';
-                }
-                if (status.env_temp !== undefined) {
-                    document.getElementById('envTemp').textContent = status.env_temp + '°C';
-                }
-                if (status.humidity !== undefined) {
-                    document.getElementById('envHumidity').textContent = status.humidity + '%';
-                }
-                if (status.light !== undefined) {
-                    document.getElementById('lightIntensity').textContent = status.light + ' lux';
-                }
-
-                // 更新設備狀態（儀表板和設備控制面板）
-                updateDeviceStatus('lightStatusDot', status.light_on);
-                updateDeviceStatus('controlLightStatusDot', status.light_on);
-                updateDeviceStatus('fanStatusDot', status.fan_on);
-                updateDeviceStatus('controlFanStatusDot', status.fan_on);
-                updateDeviceStatus('smallFanStatusDot', status.small_fan_on);
-                updateDeviceStatus('controlSmallFanStatusDot', status.small_fan_on);
-                updateDeviceStatus('pumpStatusDot', status.pump_on);
-                updateDeviceStatus('controlPumpStatusDot', status.pump_on);
-                updateDeviceStatus('humidifierStatusDot', status.humidifier_on);
-                updateDeviceStatus('controlHumidifierStatusDot', status.humidifier_on);
-                updateDeviceStatus('controlScheduleStatusDot', status.schedule_on);
-
+                const data = JSON.parse(message);
+                const val = data.value ?? data.temp ?? data;
+                document.getElementById('envTemp').textContent = val + '°C';
             } catch (e) {
-                console.error('Status parse error:', e);
+                document.getElementById('envTemp').textContent = message + '°C';
+            }
+        }
+
+        function handleHumidity(message) {
+            try {
+                const data = JSON.parse(message);
+                const val = data.value ?? data.humidity ?? data;
+                document.getElementById('envHumidity').textContent = val + '%';
+            } catch (e) {
+                document.getElementById('envHumidity').textContent = message + '%';
+            }
+        }
+
+        function handleCoreTemp(message) {
+            try {
+                const data = JSON.parse(message);
+                const val = data.value ?? data.temp ?? data;
+                document.getElementById('coreTemp').textContent = val + '°C';
+            } catch (e) {
+                document.getElementById('coreTemp').textContent = message + '°C';
+            }
+        }
+
+        function handleLightVoltage(message) {
+            try {
+                const data = JSON.parse(message);
+                const val = data.value ?? data.light ?? data;
+                document.getElementById('lightIntensity').textContent = val + ' lux';
+            } catch (e) {
+                document.getElementById('lightIntensity').textContent = message + ' lux';
+            }
+        }
+
+        // 設備狀態處理
+        function parseOnOff(message) {
+            const s = message.trim().toLowerCase();
+            return s === 'on' || s === 'true' || s === '1';
+        }
+
+        function handleLightState(message) {
+            try {
+                const data = JSON.parse(message);
+                const isOn = data.on ?? parseOnOff(data.state ?? '');
+                updateDeviceStatus('lightStatusDot', isOn);
+                updateDeviceStatus('controlLightStatusDot', isOn);
+            } catch (e) {
+                const isOn = parseOnOff(message);
+                updateDeviceStatus('lightStatusDot', isOn);
+                updateDeviceStatus('controlLightStatusDot', isOn);
+            }
+        }
+
+        function handleFanState(message) {
+            try {
+                const data = JSON.parse(message);
+                const isOn = data.on ?? parseOnOff(data.state ?? '');
+                updateDeviceStatus('fanStatusDot', isOn);
+                updateDeviceStatus('controlFanStatusDot', isOn);
+            } catch (e) {
+                const isOn = parseOnOff(message);
+                updateDeviceStatus('fanStatusDot', isOn);
+                updateDeviceStatus('controlFanStatusDot', isOn);
+            }
+        }
+
+        function handleWaterpumpState(message) {
+            try {
+                const data = JSON.parse(message);
+                const isOn = data.on ?? parseOnOff(data.state ?? '');
+                updateDeviceStatus('pumpStatusDot', isOn);
+                updateDeviceStatus('controlPumpStatusDot', isOn);
+            } catch (e) {
+                const isOn = parseOnOff(message);
+                updateDeviceStatus('pumpStatusDot', isOn);
+                updateDeviceStatus('controlPumpStatusDot', isOn);
             }
         }
 
@@ -196,42 +294,49 @@
             }
         }
 
-        // 處理指令回饋
-        function handleCommandFeedback(message) {
+        // 處理攝影機狀態
+        function handleCameraStatus(message) {
             try {
-                const feedback = JSON.parse(message);
-                const msgType = feedback.success ? 'success' : 'error';
-                showToast(feedback.message || '指令已執行', msgType);
+                const data = JSON.parse(message);
+                const statusText = data.status || data.message || message;
+                updateImageStatus('攝影機狀態：' + statusText, data.ready === false ? 'error' : 'loading');
             } catch (e) {
-                showToast('指令回饋: ' + message, 'success');
+                updateImageStatus('攝影機狀態：' + message, 'loading');
             }
         }
 
-        // 處理影像數據
-        function handleImageData(message) {
+        // 處理攝影機資訊（大小、格式等）
+        // 預期格式：{"size": 12345, "width": 640, "height": 480, "format": "JPEG"}
+        function handleCameraInfo(message) {
             try {
                 const data = JSON.parse(message);
-                if (data.image) {
-                    const img = document.getElementById('capturedImage');
-                    const placeholder = document.getElementById('imagePlaceholder');
-
-                    img.src = 'data:image/jpeg;base64,' + data.image;
-                    img.style.display = 'block';
-                    placeholder.style.display = 'none';
-
-                    updateImageStatus('影像讀取成功', 'success');
-                }
+                const parts = [];
+                if (data.size)   parts.push(`大小：${(data.size / 1024).toFixed(1)} KB`);
+                if (data.width && data.height) parts.push(`解析度：${data.width}x${data.height}`);
+                if (data.format) parts.push(`格式：${data.format}`);
+                updateImageStatus(parts.length ? parts.join('　') : message, 'loading');
             } catch (e) {
-                // 可能是直接的 base64 數據
-                const img = document.getElementById('capturedImage');
-                const placeholder = document.getElementById('imagePlaceholder');
-
-                img.src = 'data:image/jpeg;base64,' + message;
-                img.style.display = 'block';
-                placeholder.style.display = 'none';
-
-                updateImageStatus('影像讀取成功', 'success');
+                updateImageStatus(message, 'loading');
             }
+        }
+
+        // 處理攝影機影像數據
+        function handleCameraData(message) {
+            const img = document.getElementById('capturedImage');
+            const placeholder = document.getElementById('imagePlaceholder');
+
+            try {
+                const data = JSON.parse(message);
+                const base64 = data.data || data.image || data.payload;
+                if (!base64) throw new Error('no image field');
+                img.src = 'data:image/jpeg;base64,' + base64;
+            } catch (e) {
+                img.src = 'data:image/jpeg;base64,' + message;
+            }
+
+            img.style.display = 'block';
+            placeholder.style.display = 'none';
+            updateImageStatus('影像讀取成功', 'success');
         }
 
         // 更新 MQTT 狀態顯示
@@ -316,8 +421,9 @@
         function doLoginFlow(deviceId, username, password) {
             const loginBtn = document.getElementById('loginBtn');
 
-            const topics = getTopics(deviceId);
-            mqtt_client.subscribe(topics.LOGIN_RESPONSE, (err) => {
+            const subTopics = getSubTopics(deviceId);
+            const pubTopics = getPubTopics(deviceId);
+            mqtt_client.subscribe(subTopics.LOGIN_RESPONSE, (err) => {
                 if (err) {
                     showLoginStatus('訂閱失敗: ' + err.message, 'error');
                     loginBtn.classList.remove('loading');
@@ -327,7 +433,7 @@
                 }
 
                 const loginData = JSON.stringify({ username, password });
-                mqtt_client.publish(topics.LOGIN_REQUEST, loginData);
+                mqtt_client.publish(pubTopics.LOGIN_REQUEST, loginData);
                 showLoginStatus('正在驗證登入...', 'warning');
 
                 loginTimeout = setTimeout(() => {
@@ -335,7 +441,7 @@
                     loginBtn.disabled = false;
                     loginBtn.textContent = '登入系統';
                     showLoginStatus('登入超時，請確認裝置是否在線', 'error');
-                    mqtt_client.unsubscribe(topics.LOGIN_RESPONSE);
+                    mqtt_client.unsubscribe(subTopics.LOGIN_RESPONSE);
                 }, 10000);
             });
         }
@@ -377,20 +483,16 @@
             }
 
             if (mqtt_client && mqtt_client.connected && currentDeviceId) {
-                const topics = getTopics(currentDeviceId);
+                const pubTopics = getPubTopics(currentDeviceId);
+                const client = mqtt_client;
+                mqtt_client = null;
 
-                mqtt_client.publish(topics.LOGOUT_REQUEST, JSON.stringify({
+                client.publish(pubTopics.LOGOUT_REQUEST, JSON.stringify({
                     command: 'logout',
                     username: currentUsername
-                }));
-
-                mqtt_client.unsubscribe(topics.LOGIN_RESPONSE);
-                mqtt_client.unsubscribe(topics.STATUS);
-                mqtt_client.unsubscribe(topics.FEEDBACK);
-                mqtt_client.unsubscribe(topics.IMAGE);
-                mqtt_client.unsubscribe(topics.SETTINGS_RESPONSE);
-                mqtt_client.end(true);
-                mqtt_client = null;
+                }), { qos: 1 }, () => {
+                    client.end(false);
+                });
             } else if (mqtt_client) {
                 mqtt_client.end(true);
                 mqtt_client = null;
@@ -408,6 +510,7 @@
             currentUsername = '';
 
             showLoginPage();
+            hideLoginStatus();
 
             document.getElementById('accessKey').value = '';
             document.getElementById('deviceId').value = '';
@@ -429,8 +532,21 @@
                 return;
             }
 
-            const topics = getTopics(currentDeviceId);
-            mqtt_client.publish(topics.COMMAND, JSON.stringify({ command: command }));
+            const pubTopics = getPubTopics(currentDeviceId);
+            const parts = command.split('_');
+            const action = parts[parts.length - 1]; // 'on' 或 'off'
+
+            if (command.includes('light')) {
+                mqtt_client.publish(pubTopics.LIGHT_SWITCH, action);
+            } else if (command.includes('fan')) {
+                mqtt_client.publish(pubTopics.FAN_SWITCH, action);
+            } else if (command.includes('pump') || command.includes('waterpump')) {
+                mqtt_client.publish(pubTopics.WATERPUMP_SWITCH, action);
+            } else {
+                showToast('未知裝置指令: ' + command, 'error');
+                return;
+            }
+
             showToast('指令已發送: ' + command, 'success');
         }
 
@@ -462,7 +578,8 @@
             }
 
             updateImageStatus('正在讀取影像...', 'loading');
-            sendCommand('capture_image');
+            const pubTopics = getPubTopics(currentDeviceId);
+            mqtt_client.publish(pubTopics.CAMERA_SWITCH, JSON.stringify({ command: 'capture' }));
         }
 
         // 清除影像
@@ -575,8 +692,9 @@
             reloadBtn.disabled = true;
             showSettingsStatus('正在儲存設定...', 'loading');
 
-            const topics = getTopics(currentDeviceId);
-            mqtt_client.publish(topics.SETTINGS, JSON.stringify(settings));
+            // 發送設定儲存請求 json格式：{"action": "save", "watering": {...}, "humidifier": {...}, "light": {...}, "fan": {...}, "schedule": {...}}
+            const pubTopics = getPubTopics(currentDeviceId);
+            mqtt_client.publish(pubTopics.SETTINGS, JSON.stringify(settings));
 
             // 設置超時
             settingsTimeout = setTimeout(() => {
@@ -611,8 +729,9 @@
             saveBtn.disabled = true;
             showSettingsStatus('正在載入設定...', 'loading');
 
-            const topics = getTopics(currentDeviceId);
-            mqtt_client.publish(topics.SETTINGS_REQUEST, JSON.stringify({ action: 'load' }));
+            // 發送設定載入請求 json格式：{"action": "load"}
+            const pubTopics = getPubTopics(currentDeviceId);
+            mqtt_client.publish(pubTopics.SETTINGS_REQUEST, JSON.stringify({ action: 'load' }));
 
             // 設置超時
             settingsTimeout = setTimeout(() => {
@@ -643,6 +762,8 @@
             reloadBtn.disabled = false;
 
             try {
+                // 預期格式：{"action": "save_ack", "success": true}
+                // 或 {"action": "load_ack", "success": true, "settings": {...}}
                 const response = JSON.parse(message);
 
                 if (response.action === 'save_ack') {
