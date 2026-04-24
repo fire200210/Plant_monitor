@@ -35,22 +35,22 @@
 
                 <div class="form-group">
                     <label class="form-label">Access Key</label>
-                    <input type="password" class="form-input" id="accessKey" placeholder="輸入您的 Access Key">
+                    <input type="password" class="form-input" id="accessKey" placeholder="輸入您的 Access Key" value="myPlant2024">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">裝置 ID</label>
-                    <input type="text" class="form-input" id="deviceId" placeholder="輸入您的裝置識別碼">
+                    <input type="text" class="form-input" id="deviceId" placeholder="輸入您的裝置識別碼" value="PLANT_01">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">帳號</label>
-                    <input type="text" class="form-input" id="username" placeholder="輸入帳號">
+                    <input type="text" class="form-input" id="username" placeholder="輸入帳號" value="Plant2002">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">密碼</label>
-                    <input type="password" class="form-input" id="password" placeholder="輸入密碼">
+                    <input type="password" class="form-input" id="password" placeholder="輸入密碼" value="88779871">
                 </div>
 
                 <button class="login-btn" id="loginBtn" onclick="handleLogin()">
@@ -91,6 +91,14 @@
             <div class="menu-item" data-panel="settingsPanel" onclick="switchPanel('settingsPanel')">
                 <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
                 <span>參數設定</span>
+            </div>
+            <div class="menu-item menu-item-logout" onclick="handleLogout()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16,17 21,12 16,7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span>登出系統</span>
             </div>
         </div>
 
@@ -464,14 +472,6 @@
             </div>
         </div>
 
-        <button class="logout-btn" onclick="handleLogout()">
-            <svg viewBox="0 0 24 24">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16,17 21,12 16,7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            登出系統
-        </button>
     </div>
 
     <!-- 確認對話框 -->
